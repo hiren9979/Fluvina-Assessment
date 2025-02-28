@@ -1,0 +1,74 @@
+1. Find the top 5 users who spent the most in the last 3 months and their last order details.
+
+SELECT
+    u.user_id,
+    u.name,
+    SUM(o.amount) AS total_spent,
+    MAX(o.order_date) AS last_order_date,
+    o2.order_id AS last_order_id,
+    o2.amount AS last_order_amount,
+    o2.status AS last_order_status
+FROM users u
+JOIN orders o ON u.user_id = o.user_id
+LEFT JOIN orders o2 ON u.user_id = o2.user_id AND o.order_date <= o2.order_date
+WHERE o.order_date >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+GROUP BY u.user_id, u.name
+ORDER BY total_spent DESC
+LIMIT 5;
+
+2. Find the month-wise revenue breakdown for completed orders with payment method details.
+
+SELECT
+    DATE_FORMAT(o.order_date, '%Y-%m') AS order_month,
+    SUM(o.amount) AS revenue,
+    p.payment_method
+FROM orders o
+JOIN payments p ON o.order_id = p.order_id
+WHERE o.status = 'completed' AND p.payment_status = 'completed'
+GROUP BY order_month, p.payment_method
+ORDER BY order_month;
+
+3. Find the average order amount for each city, but only for users who have placed more than 3 orders.
+
+SELECT
+    u.city,
+    AVG(o.amount) AS average_order_amount
+FROM users u
+JOIN orders o ON u.user_id = o.user_id
+WHERE u.user_id IN (
+    SELECT user_id
+    FROM orders
+    GROUP BY user_id
+    HAVING COUNT(order_id) > 3
+)
+GROUP BY u.city;
+
+4. Find the top 3 cities by total spending and include their most recent completed order details.
+SELECT
+    u.city,
+    SUM(o.amount) AS total_spending,
+    o2.order_id AS recent_order_id,
+    o2.amount AS recent_order_amount,
+    o2.order_date AS recent_order_date,
+    o2.status AS recent_order_status
+FROM users u
+JOIN orders o ON u.user_id = o.user_id
+LEFT JOIN orders o2 ON u.user_id = o2.user_id AND o.order_date <= o2.order_date AND o2.status = 'completed'
+GROUP BY u.city
+ORDER BY total_spending DESC
+LIMIT 3;
+
+5. Find users who have made payments in the last 30 days but have a pending order.
+
+SELECT DISTINCT u.user_id, u.name
+FROM users u
+JOIN orders o ON u.user_id = o.user_id
+JOIN payments p ON o.order_id = p.order_id
+WHERE p.payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+AND o.status = 'pending';
+
+6. Users in New York
+db.users.find({ city: "New York" });
+
+7. Average age of users
+db.users.aggregate([ { $group: { _id: null, averageAge: { $avg: "$age" } } } ]);
